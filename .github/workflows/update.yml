@@ -1,0 +1,31 @@
+name: Update Proxy List
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch and update proxies
+        run: |
+          curl -s "https://www.flashproxy.com/api/proxies/txt?protocol=socks5&limit=2000" > all.txt
+          curl -s "https://raw.githubusercontent.com/databay-labs/free-proxy-list/refs/heads/master/socks5.txt" >> all.txt
+          curl -s "https://api.proxyscrape.com/v3/free-proxy-list/get?request=displayproxies&protocol=socks5&proxy_format=ipport&format=text&timeout=2000" >> all.txt
+          sort -u all.txt -o all.txt
+
+      - name: Commit and push updated file
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add all.txt
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update proxy list" && git push)
+
